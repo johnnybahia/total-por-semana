@@ -144,7 +144,7 @@ function gerarTotalParesPorSemana() {
 
   // Título geral
   abaDestino.getRange(linhaAtual, 1).setValue("TOTAL DE PARES POR SEMANA (apenas CM)");
-  abaDestino.getRange(linhaAtual, 1).setFontSize(13).setFontWeight("bold")
+  abaDestino.getRange(linhaAtual, 1).setFontSize(20).setFontWeight("bold")
     .setBackground("#1a3a5c").setFontColor("#ffffff");
   abaDestino.getRange(linhaAtual, 1, 1, clientesOrdenados.length + 2)
     .merge().setHorizontalAlignment("center");
@@ -167,7 +167,7 @@ function gerarTotalParesPorSemana() {
       .setBackground("#2e6da4")
       .setFontColor("#ffffff")
       .setFontWeight("bold")
-      .setFontSize(11)
+      .setFontSize(20)
       .setHorizontalAlignment("left");
     linhaAtual++;
 
