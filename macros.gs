@@ -91,7 +91,7 @@ function gerarTotalParesPorSemana() {
     const data    = colData[i][0];
 
     // Ignora linhas vazias ou sem CM (busca "CM" em qualquer posição: "125CM", "90CM", etc.)
-    if (!cliente || !tipo.includes("CM") || !data || pares <= 0) continue;
+    if (!cliente || !tipo.includes("CM") || !data || isNaN(pares) || pares <= 0) continue;
 
     // Valida que é uma data válida
     // Usa getFullYear/Month/Date direto para evitar deslocamento por fuso horário
@@ -100,8 +100,15 @@ function gerarTotalParesPorSemana() {
       // Reconstrói a data usando os valores locais (ano/mês/dia) sem horário
       dataObj = new Date(data.getFullYear(), data.getMonth(), data.getDate());
     } else {
-      dataObj = new Date(data);
-      dataObj = new Date(dataObj.getFullYear(), dataObj.getMonth(), dataObj.getDate());
+      // Tenta parsear texto em formato "DD/MM/AAAA" (padrão brasileiro)
+      const str = String(data).trim();
+      const partesBR = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (partesBR) {
+        dataObj = new Date(Number(partesBR[3]), Number(partesBR[2]) - 1, Number(partesBR[1]));
+      } else {
+        dataObj = new Date(str);
+        dataObj = new Date(dataObj.getFullYear(), dataObj.getMonth(), dataObj.getDate());
+      }
     }
     if (isNaN(dataObj.getTime())) continue;
 
