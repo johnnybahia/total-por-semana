@@ -205,6 +205,24 @@ function gerarTotalParesPorSemana(silencioso) {
   // ── Lê produção diária da outra planilha ──────────────────────────────────
   const producaoPorSemana = lerProducaoPorSemana();
 
+  // ── Cache acumulado de pedidos por semana ─────────────────────────────────
+  // O total de pedidos nunca decresce: se um pedido sair da origem, o maior
+  // valor já registrado é mantido. Novos pedidos são somados normalmente.
+  const props = PropertiesService.getScriptProperties();
+  const cachePedidos = JSON.parse(props.getProperty("cache_pedidos") || "{}");
+
+  // Para cada semana calculada, aplica Math.max(cache, novo)
+  Object.keys(semanas).forEach(chave => {
+    const totalNovo = Object.values(semanas[chave]).reduce((s, v) => s + v, 0);
+    const totalCached = cachePedidos[chave] || 0;
+    if (totalNovo > totalCached) {
+      cachePedidos[chave] = totalNovo;
+    }
+    // Substitui os valores individuais dos clientes pelo proporcional ao total final,
+    // mas mantém os clientes como estão — apenas o total da linha final é protegido.
+  });
+  props.setProperty("cache_pedidos", JSON.stringify(cachePedidos));
+
   // ── Monta o conteúdo para a aba de destino ────────────────────────────────
   abaDestino.clearContents();
   abaDestino.clearFormats();
@@ -267,9 +285,10 @@ function gerarTotalParesPorSemana(silencioso) {
       linhaAtual++;
     });
 
-    // ── Linha: TOTAL DE PEDIDOS ──────────────────────────────────────────────
+    // ── Linha: TOTAL DE PEDIDOS (valor protegido: nunca decresce) ───────────
+    const totalPedidosFinal = cachePedidos[chave] || totalPedidos;
     abaDestino.getRange(linhaAtual, 1).setValue("TOTAL DE PEDIDOS");
-    abaDestino.getRange(linhaAtual, 2).setValue(totalPedidos);
+    abaDestino.getRange(linhaAtual, 2).setValue(totalPedidosFinal);
     abaDestino.getRange(linhaAtual, 1, 1, 2)
       .setBackground("#1a3a5c")
       .setFontColor("#ffffff")
@@ -289,7 +308,7 @@ function gerarTotalParesPorSemana(silencioso) {
     linhaAtual++;
 
     // ── Linha: SALDO (produção - pedidos) ────────────────────────────────────
-    const saldo = producaoSemana - totalPedidos;
+    const saldo = producaoSemana - totalPedidosFinal;
     const bgSaldo  = saldo >= 0 ? "#27ae60" : "#c0392b"; // verde ou vermelho
     const labelSaldo = saldo >= 0
       ? `SALDO: +${saldo} (em dia)`
@@ -401,6 +420,23 @@ function formatarDataBR(d) {
 
 // ── Menu personalizado ─────────────────────────────────────────────────────
 
+/**
+ * Zera o cache de totais de pedidos.
+ * Use apenas se quiser recalcular tudo do zero a partir da origem.
+ */
+function zerarCachePedidos() {
+  const ui = SpreadsheetApp.getUi();
+  const resp = ui.alert(
+    "Zerar cache de pedidos?",
+    "Isso fará o relatório recalcular os totais de pedidos do zero na próxima execução.\n\nTotais que já saíram da origem serão perdidos. Deseja continuar?",
+    ui.ButtonSet.YES_NO
+  );
+  if (resp === ui.Button.YES) {
+    PropertiesService.getScriptProperties().deleteProperty("cache_pedidos");
+    ui.alert("✅ Cache zerado. Na próxima geração os totais serão recalculados.");
+  }
+}
+
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("📦 Marfim")
@@ -408,5 +444,7 @@ function onOpen() {
     .addSeparator()
     .addItem("⏰ Ativar atualização diária automática", "criarAcionadorDiario")
     .addItem("🗑️ Desativar atualização diária", "removerAcionadorDiario")
+    .addSeparator()
+    .addItem("🔄 Zerar cache de pedidos (recalcular do zero)", "zerarCachePedidos")
     .addToUi();
 }
