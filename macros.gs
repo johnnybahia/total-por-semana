@@ -327,6 +327,9 @@ function gerarTotalParesPorSemana(silencioso) {
   abaDestino.setColumnWidth(1, 280);
   abaDestino.setColumnWidth(2, 180);
 
+  // Aplica fonte 20 em todo o conteúdo gerado
+  abaDestino.getDataRange().setFontSize(20);
+
   // Congela primeira linha
   abaDestino.setFrozenRows(1);
 
