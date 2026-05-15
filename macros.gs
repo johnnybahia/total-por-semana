@@ -205,6 +205,10 @@ function gerarTotalParesPorSemana(silencioso) {
   // ── Lê produção diária da outra planilha ──────────────────────────────────
   const producaoPorSemana = lerProducaoPorSemana();
 
+  // ── Cache de totais de pedidos (nunca decresce) ───────────────────────────
+  const scriptProps = PropertiesService.getScriptProperties();
+  const cachePedidosRaw = scriptProps.getProperty("cache_pedidos");
+  const cachePedidos = cachePedidosRaw ? JSON.parse(cachePedidosRaw) : {};
 
   // ── Monta o conteúdo para a aba de destino ────────────────────────────────
   abaDestino.clearContents();
@@ -269,7 +273,9 @@ function gerarTotalParesPorSemana(silencioso) {
     });
 
     // ── Linha: TOTAL DE PEDIDOS ──────────────────────────────────────────────
-    const totalPedidosFinal = totalPedidos;
+    // Usa o maior valor já registrado (congela se o novo for menor)
+    const totalPedidosFinal = Math.max(cachePedidos[chave] || 0, totalPedidos);
+    cachePedidos[chave] = totalPedidosFinal;
     abaDestino.getRange(linhaAtual, 1).setValue("TOTAL DE PEDIDOS");
     abaDestino.getRange(linhaAtual, 2).setValue(totalPedidosFinal);
     abaDestino.getRange(linhaAtual, 1, 1, 2)
@@ -305,6 +311,9 @@ function gerarTotalParesPorSemana(silencioso) {
       .setBorder(true, true, true, true, true, true);
     linhaAtual += 2; // Espaço entre semanas
   });
+
+  // Persiste o cache de totais de pedidos
+  scriptProps.setProperty("cache_pedidos", JSON.stringify(cachePedidos));
 
   // Ajusta largura das colunas
   abaDestino.setColumnWidth(1, 280);
